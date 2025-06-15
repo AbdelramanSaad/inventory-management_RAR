@@ -117,21 +117,29 @@ class InventoryItemController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $filters = $request->only([
-            'category',
-            'warehouse_id',
-            'below_min_stock',
-            'search',
-        ]);
+        try {
+            $filters = $request->only([
+                'category',
+                'warehouse_id',
+                'below_min_stock',
+                'search',
+            ]);
 
-        // If user is not admin, restrict to their warehouse
-        if (!$request->user()->isAdmin()) {
-            $filters['warehouse_id'] = $request->user()->warehouse_id;
+            // If user is not admin, restrict to their warehouse
+            if (!$request->user()->isAdmin()) {
+                $filters['warehouse_id'] = $request->user()->warehouse_id;
+            }
+
+            $inventoryItems = $this->inventoryItemService->getFiltered($filters, $request->get('per_page', 15));
+            
+            return InventoryItemResource::collection($inventoryItems);
+        } catch (\Exception $e) {
+            // Log the error with detailed information
+            \Illuminate\Support\Facades\Log::error('InventoryItem Index Error: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error Stack Trace: ' . $e->getTraceAsString());
+            
+            return response()->json(['error' => 'Error retrieving inventory items: ' . $e->getMessage()], 500);
         }
-
-        $inventoryItems = $this->inventoryItemService->getFiltered($filters, $request->get('per_page', 15));
-
-        return InventoryItemResource::collection($inventoryItems);
     }
 
     /**
