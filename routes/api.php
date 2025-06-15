@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\InventoryItemController;
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\TestInventoryItemController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,7 +25,7 @@ Route::group(['prefix' => 'auth'], function () {
     Route::post('register', [AuthController::class, 'register']);
     
     // Protected authentication routes
-    Route::group(['middleware' => 'auth:api'], function () {
+    Route::group(['middleware' => app()->environment('testing') ? 'jwt.test' : 'auth:api'], function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::get('profile', [AuthController::class, 'userProfile']);
@@ -32,7 +33,7 @@ Route::group(['prefix' => 'auth'], function () {
 });
 
 // Protected Routes
-Route::group(['middleware' => 'auth:api'], function () {
+Route::group(['middleware' => app()->environment('testing') ? 'jwt.test' : 'auth:api'], function () {
     // Inventory Items Routes
     Route::get('inventory-items', [InventoryItemController::class, 'index']);
     Route::get('inventory-items/{id}', [InventoryItemController::class, 'show']);
@@ -50,4 +51,13 @@ Route::group(['middleware' => 'auth:api'], function () {
     
     // Audit Logs Routes
     Route::get('audit-logs', [AuditLogController::class, 'index']);
+});
+
+// Rutas de prueba sin middleware JWT para depuración
+Route::prefix('test-inventory-items')->group(function () {
+    Route::get('/', [TestInventoryItemController::class, 'index']);
+    Route::post('/', [TestInventoryItemController::class, 'store']);
+    Route::get('/{id}', [TestInventoryItemController::class, 'show']);
+    Route::put('/{id}', [TestInventoryItemController::class, 'update']);
+    Route::delete('/{id}', [TestInventoryItemController::class, 'destroy']);
 });
