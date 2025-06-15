@@ -33,39 +33,40 @@ class InventoryItemRepository implements InventoryItemRepositoryInterface
      */
     public function getFiltered(array $filters, int $perPage): LengthAwarePaginator
     {
-        $warehouseId = $filters['warehouse_id'] ?? null;
-        $userId = $filters['user_id'] ?? null;
-        $cacheKey = "inventory_items_" . md5(json_encode($filters)) . "_page_" . request()->get('page', 1);
+        // Desactivar temporalmente el caché para depuración
+        // $warehouseId = $filters['warehouse_id'] ?? null;
+        // $userId = $filters['user_id'] ?? null;
+        // $cacheKey = "inventory_items_" . md5(json_encode($filters)) . "_page_" . request()->get('page', 1);
+        // 
+        // if ($warehouseId) {
+        //     $cacheKey .= "_warehouse_" . $warehouseId;
+        // }
         
-        if ($warehouseId) {
-            $cacheKey .= "_warehouse_" . $warehouseId;
+        // Ejecutar la consulta directamente sin caché para depuración
+        $query = $this->model->with(['user', 'warehouse']);
+        
+        if (isset($filters['category']) && $filters['category']) {
+            $query->where('category', $filters['category']);
         }
         
-        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($filters, $perPage) {
-            $query = $this->model->with(['user', 'warehouse']);
-            
-            if (isset($filters['category']) && $filters['category']) {
-                $query->where('category', $filters['category']);
-            }
-            
-            if (isset($filters['warehouse_id']) && $filters['warehouse_id']) {
-                $query->where('warehouse_id', $filters['warehouse_id']);
-            }
-            
-            if (isset($filters['below_min_stock']) && $filters['below_min_stock']) {
-                $query->whereRaw('quantity <= min_stock_level');
-            }
-            
-            if (isset($filters['search']) && $filters['search']) {
-                $search = $filters['search'];
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
-                });
-            }
-            
-            return $query->orderBy('created_at', 'desc')->paginate($perPage);
-        });
+        if (isset($filters['warehouse_id']) && $filters['warehouse_id']) {
+            $query->where('warehouse_id', $filters['warehouse_id']);
+        }
+        
+        if (isset($filters['below_min_stock']) && $filters['below_min_stock']) {
+            $query->whereRaw('quantity <= min_stock_level');
+        }
+        
+        if (isset($filters['search']) && $filters['search']) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+        
+        // Asegurarnos de que las relaciones se carguen correctamente
+        return $query->with(['user', 'warehouse'])->orderBy('created_at', 'desc')->paginate($perPage);
     }
 
     /**

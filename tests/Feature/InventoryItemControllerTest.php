@@ -76,6 +76,12 @@ class InventoryItemControllerTest extends TestCase
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
         ])->getJson('/api/inventory-items');
+        
+        // Imprimir el contenido de la respuesta para depuración
+        if ($response->getStatusCode() != 200) {
+            echo "\nResponse Status: " . $response->getStatusCode();
+            echo "\nResponse Content: " . $response->getContent() . "\n";
+        }
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data')

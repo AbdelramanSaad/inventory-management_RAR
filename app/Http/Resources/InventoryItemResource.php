@@ -14,7 +14,7 @@ class InventoryItemResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
@@ -24,17 +24,31 @@ class InventoryItemResource extends JsonResource
             'category' => $this->category,
             'image' => $this->image ? asset('storage/' . $this->image) : null,
             'is_low_stock' => $this->isLowStock(),
-            'warehouse' => [
-                'id' => $this->warehouse->id,
-                'name' => $this->warehouse->name,
-                'location' => $this->warehouse->location,
-            ],
-            'created_by' => [
-                'id' => $this->user->id,
-                'name' => $this->user->name,
-            ],
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];
+        
+        // Verificar si la relación warehouse está cargada y no es nula
+        if ($this->relationLoaded('warehouse') && $this->warehouse) {
+            $data['warehouse'] = [
+                'id' => $this->warehouse->id,
+                'name' => $this->warehouse->name,
+                'location' => $this->warehouse->location,
+            ];
+        } else {
+            $data['warehouse'] = null;
+        }
+        
+        // Verificar si la relación user está cargada y no es nula
+        if ($this->relationLoaded('user') && $this->user) {
+            $data['created_by'] = [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+            ];
+        } else {
+            $data['created_by'] = null;
+        }
+        
+        return $data;
     }
 }

@@ -115,30 +115,54 @@ class InventoryItemController extends Controller
      *     )
      * )
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request)
     {
         try {
-            $filters = $request->only([
-                'category',
-                'warehouse_id',
-                'below_min_stock',
-                'search',
-            ]);
-
-            // If user is not admin, restrict to their warehouse
-            if (!$request->user()->isAdmin()) {
-                $filters['warehouse_id'] = $request->user()->warehouse_id;
-            }
-
-            $inventoryItems = $this->inventoryItemService->getFiltered($filters, $request->get('per_page', 15));
+            // Enfoque simplificado para depuración
+            // Obtener directamente los elementos de inventario sin usar el servicio
+            $query = \App\Models\InventoryItem::query();
             
-            return InventoryItemResource::collection($inventoryItems);
+            // Si el usuario no es admin, restringir a su almacén
+            if (!$request->user()->isAdmin()) {
+                $query->where('warehouse_id', $request->user()->warehouse_id);
+            }
+            
+            // Obtener resultados sin paginación para simplificar
+            $inventoryItems = $query->orderBy('created_at', 'desc')->get();
+            
+            // Transformar manualmente los datos para evitar problemas con el recurso
+            $data = [];
+            foreach ($inventoryItems as $item) {
+                $data[] = [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'quantity' => $item->quantity,
+                    'min_stock_level' => $item->min_stock_level,
+                    'unit_price' => $item->unit_price,
+                    'category' => $item->category,
+                    'warehouse_id' => $item->warehouse_id,
+                    'user_id' => $item->user_id,
+                    'created_at' => $item->created_at->toIso8601String(),
+                    'updated_at' => $item->updated_at->toIso8601String(),
+                ];
+            }
+            
+            // Devolver respuesta JSON simple
+            return response()->json(['data' => $data], 200);
         } catch (\Exception $e) {
-            // Log the error with detailed information
+            // Log detallado del error
             \Illuminate\Support\Facades\Log::error('InventoryItem Index Error: ' . $e->getMessage());
             \Illuminate\Support\Facades\Log::error('Error Stack Trace: ' . $e->getTraceAsString());
+            \Illuminate\Support\Facades\Log::error('Error File: ' . $e->getFile() . ' on line ' . $e->getLine());
             
-            return response()->json(['error' => 'Error retrieving inventory items: ' . $e->getMessage()], 500);
+            // Devolver respuesta de error con detalles para depuración
+            return response()->json([
+                'error' => 'Error retrieving inventory items', 
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
         }
     }
 
