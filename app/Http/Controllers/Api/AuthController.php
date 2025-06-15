@@ -74,25 +74,40 @@ class AuthController extends Controller
      *             @OA\Property(property="email", type="array", @OA\Items(type="string")),
      *             @OA\Property(property="password", type="array", @OA\Items(type="string"))
      *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal Server Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Authentication error: ...")
+     *         )
      *     )
      * )
      */
     public function login(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string|min:6',
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required|string|min:6',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            if ($validator->fails()) {
+                return response()->json($validator->errors(), 422);
+            }
+
+            if (!$token = auth()->attempt($validator->validated())) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            return $this->createNewToken($token);
+        } catch (\Exception $e) {
+            // Log the error with detailed information
+            \Illuminate\Support\Facades\Log::error('Login Error: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error Stack Trace: ' . $e->getTraceAsString());
+            
+            return response()->json(['error' => 'Authentication error: ' . $e->getMessage()], 500);
         }
-
-        if (!$token = auth()->attempt($validator->validated())) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        return $this->createNewToken($token);
     }
 
     /**
