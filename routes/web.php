@@ -29,13 +29,25 @@ Route::get('/laravel-websockets', function () {
 
 // توثيق Swagger
 Route::get('/api/documentation', function () {
-    return view('vendor.l5-swagger.index');
+    return response()->view('vendor.l5-swagger.index', [
+        'documentation' => 'default',
+        'secure' => false,
+        'urlToDocs' => '/api/documentation/api-docs.json',
+        'operationsSorter' => 'alpha',
+        'configUrl' => '',
+        'validatorUrl' => null
+    ]);
 });
 
 // ملف توثيق Swagger JSON
 Route::get('/api/documentation/api-docs.json', function () {
-    return response()
-        ->file(storage_path('api-docs/api-docs.json'), [
-            'Content-Type' => 'application/json'
-        ]);
+    $path = storage_path('api-docs/api-docs.json');
+    if (!file_exists($path)) {
+        // إذا لم يكن الملف موجودًا، قم بتوليده
+        \Artisan::call('l5-swagger:generate');
+    }
+    
+    $content = file_get_contents($path);
+    return response($content)
+        ->header('Content-Type', 'application/json');
 });

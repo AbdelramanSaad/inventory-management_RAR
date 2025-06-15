@@ -75,6 +75,16 @@ class AuditLogController extends Controller
      *         )
      *     ),
      *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="integer",
+     *             default=1
+     *         )
+     *     ),
+     *     @OA\Parameter(
      *         name="per_page",
      *         in="query",
      *         description="Number of items per page",
